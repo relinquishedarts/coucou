@@ -12,7 +12,7 @@ import { ICONS } from "./icons";
 import { Bridge } from "../core/bridge";
 import { State, type AgentTask } from "../core/state";
 import {
-  SPOTIFY_GREEN, SPOTIFY_ID, Spotify, currentArtwork, formatTime, isAd, spotifyPosition, volumeLevel, withPlaying,
+  SPOTIFY_GREEN, SPOTIFY_ID, MUSIC_ID, MUSIC_RED, Spotify, currentArtwork, formatTime, isAd, spotifyPosition, volumeLevel, withPlaying,
   type SpotifyTrack,
 } from "../core/spotify";
 import { createMiniBot } from "../mochi/minibots";
@@ -266,9 +266,10 @@ export function buildSpotifyCard(): SpotifyCardHost {
   art.addEventListener("click", () => void Bridge.spotifyOpen());
   const title = h("span", { class: "np-title" });
   const subtitle = h("div", { class: "np-sub" });
+  const titleDot = dot(green, 6);
   const head = h("div", { class: "np-head" },
     art,
-    h("div", { class: "np-text" }, h("div", { class: "np-title-row" }, dot(green, 6), title), subtitle),
+    h("div", { class: "np-text" }, h("div", { class: "np-title-row" }, titleDot, title), subtitle),
   );
 
   let dragFraction: number | null = null;
@@ -357,6 +358,10 @@ export function buildSpotifyCard(): SpotifyCardHost {
 
   function syncPlaying(track: SpotifyTrack) {
     const s = Spotify.state;
+    const isMusic = State.focusTask?.id === MUSIC_ID;
+    const accent = isMusic ? MUSIC_RED : green;
+    titleDot.style.background = accent;
+    artNote.style.color = `${accent}b3`;
     if (shownTrack !== track) {
       shownTrack = track;
       title.textContent = isAd(track) ? t("Advertisement") : track.title;
@@ -366,7 +371,7 @@ export function buildSpotifyCard(): SpotifyCardHost {
     } else if (isAd(track)) {
       title.textContent = t("Advertisement");
     }
-    art.title = track.album ? t("{0} — open Spotify", { 0: track.album }) : t("Open Spotify");
+    art.title = track.album ? t("{0} — open", { 0: track.album }) : (isMusic ? t("Open Apple Music") : t("Open Spotify"));
     const cover = currentArtwork(s);
     if (cover) {
       if (artImg.getAttribute("src") !== cover) artImg.setAttribute("src", cover);
@@ -405,11 +410,13 @@ export function buildSpotifyCard(): SpotifyCardHost {
   }
 
   function syncIdle() {
+    const isMusic = State.focusTask?.id === MUSIC_ID;
+    const appName = isMusic ? "Apple Music" : "Spotify";
     const installed = Spotify.state.installed || Spotify.state.running;
     idleDot.style.background = installed ? "#22C55E" : "#F4505E";
-    idleText.textContent = installed ? t("Not playing") : t("Spotify not installed");
-    idleAction.textContent = installed ? t("Open Spotify") : t("Get Spotify");
-    idleSub.textContent = t(pillDefinition(SPOTIFY_ID)?.subtitle ?? N_("Integration"));
+    idleText.textContent = installed ? t("Not playing") : t("{0} not installed", { 0: appName });
+    idleAction.textContent = installed ? (isMusic ? t("Open Apple Music") : t("Open Spotify")) : (isMusic ? t("Get Apple Music") : t("Get Spotify"));
+    idleSub.textContent = t(pillDefinition(isMusic ? MUSIC_ID : SPOTIFY_ID)?.subtitle ?? N_("Integration"));
   }
 
   return {
